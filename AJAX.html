@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head lang="en">
+    <meta charset="UTF-8">
+    <title>Github Search W/ Ajax</title>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var anchors = document.querySelectorAll('a');
+            //making first ajax call to get github information
+
+
+            //callback function for ajax
+            var ajaxfunc=function(data, xhr){
+                //console.log(data);
+               // console.log(xhr);
+
+                var linksObj=updateLinks(xhr.getResponseHeader('Link'));
+                //console.log(linksObj);
+                for(var prop in linksObj){
+                    switch (prop){
+                        case 'first':
+                            anchors[0].href=linksObj[prop];
+                            break;
+                        case 'prev':
+                            anchors[1].href=linksObj[prop];
+                            break;
+                        case 'next':
+                            anchors[2].href=linksObj[prop];
+                            break;
+                        case 'last':
+                            anchors[3].href=linksObj[prop];
+                            break;
+                        default:
+                            break;
+
+                    }
+                }
+
+
+            }
+            document.querySelector('input[name="search"]').addEventListener('change', function(){
+
+               var url = 'https://api.github.com/search/repositories?q=' +this.value;
+                makeAjaxCall(url, ajaxfunc);
+            });
+
+            //clicklistener on page navigator
+            document.querySelector('div').addEventListener('click', function(event){
+                //console.log(event.target);
+                event.preventDefault();
+                if(event.target.href){
+                    makeAjaxCall(event.target.href, ajaxfunc);
+
+                }
+            });
+
+        });
+        //makes ajax call using url
+        function makeAjaxCall(url, callback){
+            var xhr= new XMLHttpRequest();
+            xhr.open('GET', url);
+            xhr.addEventListener('readystatechange', function(){
+                if(xhr.readyState===4){
+                    var obj =JSON.parse(xhr.responseText);
+                    createOLList(obj,xhr);
+                    callback(obj, xhr);
+                    //console.log()
+                }
+            });
+
+            xhr.send();
+
+
+        }
+        ///createelement with elemnt, its parent, any class name, and inner html
+        function createElement(elementType, parent, className, innerHTML){
+                    var element = document.createElement(elementType);
+                    if(parent) parent.appendChild(element);
+                    if(className) element.className=className;
+                    if(innerHTML) element.innerHTML=innerHTML;
+                    return element;
+
+                }
+
+        //creates Ordered List of repositories
+        function createOLList(obj,xhr){
+           // console.log(obj);
+            var ol = document.querySelector('ol');
+            while(document.querySelector('li')){
+                ol.removeChild(document.querySelector('li'));
+            }
+
+            //var ul = createElement('ul', ol, '','');
+            var count=0;
+            for (var o in obj['items']){
+                createElement('li', ol, 'name'+count, obj['items'][o]['full_name']);
+                count++;
+            }
+            //listener on list elements to update sideview
+            ol.addEventListener('click', function(event){
+                var str=event.target.classList[0].substr(4);
+                var index=parseInt(str);
+                var ownerElems=document.querySelectorAll('div.side-view>*');
+                //console.log(ownerElems);
+                ownerElems[0].href=obj['items'][index]['html_url'];
+                ownerElems[0].innerHTML='Link: '+obj['items'][index]['html_url'];
+                ownerElems[1].innerHTML='Login Name:'+obj['items'][index]['owner']['login'];
+                ownerElems[2].src=obj['items'][index]['owner']['avatar_url'];
+                ownerElems[3].innerHTML='Id '+obj['items'][index]['owner']['id'];
+
+            });
+        }
+        //updates page navigator links
+         function updateLinks(links) {
+             function parseLinkHeader(header) {
+                 var re = /<[^>]+>;\s+rel="[^"]+"/gmi;
+                 var matches = links.match(re);
+                 return matches.reduce(function (obj, m) {
+                     var re = /<([^>]+)>;\s+rel="([^"]+)"/gmi;
+                     var info = re.exec(m);
+                     obj[info[2]] = info[1];
+                     return obj;
+                 }, {});
+             }
+             return parseLinkHeader(links);
+         }
+
+
+    </script>
+
+    <style>
+        p.input{
+            margin-bottom:50px;
+            margin-left:10px;
+
+        }
+        ol{
+            height:100%;
+            width: 30%;
+
+        }
+
+        div.repos-info {
+            margin:0;
+        }
+
+        div.side-view{
+            width: 60%;
+            height:50%;
+            float:right;
+        }
+        img{
+            height:100px;
+            width:100px;
+        }
+    </style>
+</head>
+    <body>
+       <p class="input">Search For Any Repositories: <input  text="text" name="search" placeholder="Search Github"></p>
+
+
+    <div>
+        <a href="#">First Page</a>
+        <a href="#">Prev Page</a>
+        <a href="#">Next Page</a>
+        <a href="#">Last Page</a>
+    </div>
+    <div class="repos-info">
+        <div class ="side-view">
+                <a class="githublink" href="#" target="_blank"></a>
+                <p class="owner"></p>
+                <img class="ownerimg" src="#" alt=""/>
+                <p class="ownerid"></p>
+        </div>
+        <ol></ol>
+    </div>
+</body>
+</html>
